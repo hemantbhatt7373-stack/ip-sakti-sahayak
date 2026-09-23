@@ -1,0 +1,48 @@
+{
+  "legal_sections": [
+    {
+      "act": "The Patents Act, 1970",
+      "section": "3(p)",
+      "title": "Traditional Knowledge Exclusion",
+      "rule": "An invention which in effect is traditional knowledge or which is an aggregation or duplication of known properties of traditionally known component or components is not patentable.",
+      "guidance": "हल्दी, नीम जैसी चीज़ों के पारंपरिक उपयोगों का सीधा मिश्रण पेटेंट नहीं हो सकता। नया एक्सट्रैक्शन मेथड या synergistic effect होना अनिवार्य है।"
+    },
+    {
+      "act": "The Patents Act, 1970",
+      "section": "3(e)",
+      "title": "Mere Admixture",
+      "rule": "A substance obtained by a mere admixture resulting only in the aggregation of the properties of the components thereof or a process for producing such substance is not patentable.",
+      "guidance": "दो या दो से अधिक द्रव्यों का साधारण मिश्रण अगर केवल उनके व्यक्तिगत गुणों का योग है, तो वह धारा 3(e) के तहत खारिज होगा।"
+    },
+    {
+      "act": "Biological Diversity Act, 2002",
+      "section": "6",
+      "title": "Prior Approval from NBA for IPR",
+      "rule": "No person shall apply for any intellectual property right for any invention based on any research or information on a biological resource obtained from India without obtaining the previous approval of National Biodiversity Authority (NBA).",
+      "guidance": "भारतीय जैविक संसाधन (Biological Resource) पर पेटेंट फाइल करने से पहले NBA की पूर्व अनुमति (Form-1) अनिवार्य है।"
+    }
+  ],
+  "herbal_knowledge": [
+    {
+      "herb": "हल्दी (Turmeric)",
+      "botanical_name": "Curcuma longa",
+      "classical_texts": ["चरक संहिता (Vranaropana)", "सुश्रुत संहिता"],
+      "traditional_properties": ["Wound Healing", "Anti-inflammatory", "Antiseptic"],
+      "patentable_scope": "सामान्य पाउडर या लेप पर धारा 3(p) के तहत पेटेंट प्रतिबंधित है। पेटेंट केवल नैनो-करक्यूमिन फॉर्मूलेशन या बेहतर बायो-अवेलेबिलिटी वाले नोवेल प्रोसेस पर संभव है।"
+    },
+    {
+      "herb": "नीम (Neem)",
+      "botanical_name": "Azadirachta indica",
+      "classical_texts": ["चरक संहिता", "अष्टांग हृदय"],
+      "traditional_properties": ["Antifungal", "Antibacterial", "Pest repellent"],
+      "patentable_scope": "नीम के तेल या अर्क का कीटनाशक/फंगसरोधी उपयोग सार्वजनिक ज्ञान है (Ref: European Patent Office Neem Revocation Case)। केवल स्टेबलाइज्ड नोवेल डेरिवेटिव्स ही विचारणीय हैं।"
+    },
+    {
+      "herb": "अश्वगंधा (Ashwagandha)",
+      "botanical_name": "Withania somnifera",
+      "classical_texts": ["भावप्रकाश निघंटु", "चरक संहिता (रसायन अध्याय)"],
+      "traditional_properties": ["Stress Relief", "Adaptogen", "Immunity Booster"],
+      "patentable_scope": "सामान्य चूर्ण या अर्क गैर-पेटेंट योग्य है। स्टैंडर्डाइज़्ड विदानोलाइड्स (Withanolides) का सिंथेटिक ड्रग के साथ नोवेल सिनर्जिस्टिक कॉम्बिनेशन ही मान्य हो सकता है।"
+    }
+  ]
+}

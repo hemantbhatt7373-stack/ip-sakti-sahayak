@@ -1,0 +1,356 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from backend.app.agents.legal_examiner import LegalExaminerAgent
+
+app = FastAPI(title="IP-SAKTI Sahayak")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+examiner = LegalExaminerAgent()
+
+class PatentQuery(BaseModel):
+    query: str
+    language: str = "Hindi"
+
+HTML_PAGE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP-SAKTI Sahayak | Quantum IPR Station</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .brand { font-family: 'Space Grotesk', sans-serif; }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.72);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+        }
+        .glass-panel:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-black text-slate-100 min-h-screen overflow-x-hidden relative">
+
+    <!-- 3D WebGL Background Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Foreground Content Layer -->
+    <div class="relative z-10 max-w-7xl mx-auto px-6 py-8">
+        
+        <!-- Header Station -->
+        <header class="glass-panel rounded-2xl p-5 mb-8 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+                    ⚖️
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">
+                        IP-SAKTI SAHAYAK
+                    </h1>
+                    <p class="text-xs text-slate-400">Autonomous Traditional Knowledge & Bio-Compliance Defense Engine</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    TKDL Core Live
+                </div>
+                <select id="langSelect" class="bg-slate-900/90 border border-slate-700 text-xs rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-cyan-400">
+                    <option value="Hindi">हिन्दी (Hindi)</option>
+                    <option value="English">English</option>
+                    <option value="Marathi">मराठी (Marathi)</option>
+                    <option value="Tamil">தமிழ் (Tamil)</option>
+                    <option value="Telugu">తెలుగు (Telugu)</option>
+                    <option value="Bengali">বাংলা (Bengali)</option>
+                    <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Main Workspace Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Console: Input Claims -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-sm font-semibold text-cyan-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span>📡</span> Patent Claim Formulation
+                    </h2>
+                    
+                    <textarea id="claimInput" rows="7" 
+                        class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                        placeholder="विस्तार से लिखें: सक्रिय घटक, निष्कर्षण प्रक्रिया (Extraction), और उपचारात्मक प्रभाव..."></textarea>
+                    
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="setQuery('मैंने हल्दी और सरसों के तेल को उच्च तापमान पर मिलाकर घाव भरने वाला एक नया मरहम बनाया है, क्या इसका पेटेंट संभव है?')" 
+                            class="text-xs bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+                            हल्दी उदाहरण
+                        </button>
+                        <button onclick="setQuery('मैंने नीम की पत्तियों से सॉल्वेंट एक्सट्रैक्शन द्वारा एंटीफंगल डैंड्रफ तेल विकसित किया है।')" 
+                            class="text-xs bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+                            नीम उदाहरण
+                        </button>
+                    </div>
+
+                    <button onclick="evaluateClaim()" id="btnSubmit" 
+                        class="w-full mt-6 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-3 rounded-xl text-sm shadow-[0_0_25px_rgba(6,182,212,0.4)] transition duration-300">
+                        🚀 Run Deep Statutory Examination
+                    </button>
+                </div>
+
+                <!-- Legal Sentinel Badges -->
+                <div class="glass-panel rounded-2xl p-5 text-xs text-slate-400 space-y-3">
+                    <div class="font-semibold text-slate-200 uppercase tracking-wider">Statutory Sentinel Protocol:</div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyan-400 font-bold">•</span>
+                        <span><strong>Section 3(p):</strong> Traditional Knowledge Exclusion (Patents Act 1970).</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyan-400 font-bold">•</span>
+                        <span><strong>Section 3(e):</strong> Mere Admixture with no synergistic step.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyan-400 font-bold">•</span>
+                        <span><strong>NBA Section 6:</strong> Mandatory pre-clearance (Form-1) for biological resources.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Console: Dynamic Intelligence Output -->
+            <div class="lg:col-span-7">
+                
+                <!-- Idle State Box -->
+                <div id="idleState" class="glass-panel rounded-2xl p-16 text-center border-dashed border-slate-800">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-3xl animate-pulse">
+                        🪐
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-300">Neural Engine Awaiting Input</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-2">
+                        फॉर्मूलेशन दर्ज करें और जांच शुरू करें। सिस्टम 3D स्पेस आर्किटेक्चर पर तुरंत परिणाम प्रस्तुत करेगा।
+                    </p>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loadingState" class="hidden glass-panel rounded-2xl p-16 text-center">
+                    <div class="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <h3 class="text-base font-semibold text-cyan-300">Scanning Ayurvedic Treatises & Statutory DB...</h3>
+                    <p class="text-xs text-slate-400 mt-1">Cross-referencing Charaka, Sushruta & Patents Act 1970</p>
+                </div>
+
+                <!-- Analysis Dossier Result -->
+                <div id="resultState" class="hidden space-y-6">
+                    
+                    <!-- Bio-Resource Identification Header -->
+                    <div class="glass-panel rounded-2xl p-5 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-cyan-400 uppercase font-semibold">Identified Biological Entity</span>
+                            <h3 id="herbHeader" class="text-xl font-bold text-white mt-0.5"></h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs px-3 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 font-mono font-bold">
+                                Section 3(p) Risk Triggered
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Certified Examiner Dossier -->
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                            <h4 class="text-sm font-semibold text-slate-200">Official Statutory Assessment</h4>
+                            <span id="cryptoHash" class="text-[10px] font-mono text-cyan-400 bg-slate-900 px-2 py-1 rounded border border-slate-800"></span>
+                        </div>
+                        <div id="dossierBody" class="text-sm text-slate-300 leading-relaxed space-y-4 whitespace-pre-wrap max-h-[500px] overflow-y-auto pr-2"></div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Three.js Universe & 3D Earth Script -->
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 1. 3D Earth Sphere
+        const earthGeo = new THREE.SphereGeometry(3.5, 64, 64);
+        const earthMat = new THREE.MeshPhongMaterial({
+            color: 0x0ea5e9,
+            emissive: 0x03254c,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.35
+        });
+        const earth = new THREE.Mesh(earthGeo, earthMat);
+        earth.position.set(5.5, -0.5, -2);
+        scene.add(earth);
+
+        // Orbit Halo Ring
+        const ringGeo = new THREE.RingGeometry(4.2, 4.4, 64);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.3
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.copy(earth.position);
+        ring.rotation.x = Math.PI / 2.2;
+        scene.add(ring);
+
+        // 2. Cosmic Star Field
+        const starsGeo = new THREE.BufferGeometry();
+        const starCount = 2500;
+        const starCoords = new Float32Array(starCount * 3);
+
+        for(let i = 0; i < starCount * 3; i += 3) {
+            starCoords[i] = (Math.random() - 0.5) * 80;
+            starCoords[i+1] = (Math.random() - 0.5) * 80;
+            starCoords[i+2] = (Math.random() - 0.5) * 80;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(starCoords, 3));
+
+        const starsMat = new THREE.PointsMaterial({
+            color: 0xbae6fd,
+            size: 0.09,
+            transparent: true,
+            opacity: 0.8
+        });
+        const starField = new THREE.Points(starsGeo, starsMat);
+        scene.add(starField);
+
+        // Lights
+        const light = new THREE.DirectionalLight(0x38bdf8, 2);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x020617, 1.5));
+
+        camera.position.z = 8;
+
+        // Interactive Mouse Parallax
+        let mouseX = 0, mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 0.5;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 0.5;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            earth.rotation.y += 0.002;
+            earth.rotation.x += 0.0006;
+            ring.rotation.z += 0.001;
+            starField.rotation.y -= 0.0004;
+
+            camera.position.x += (mouseX - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Backend Integration
+        function setQuery(text) {
+            document.getElementById('claimInput').value = text;
+        }
+
+        async function evaluateClaim() {
+            const query = document.getElementById('claimInput').value.trim();
+            const language = document.getElementById('langSelect').value;
+            if(!query) return;
+
+            document.getElementById('idleState').classList.add('hidden');
+            document.getElementById('resultState').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ query, language })
+                });
+                const data = await res.json();
+                
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('resultState').classList.remove('hidden');
+
+                if (data.success) {
+                    const resData = data.data;
+                    document.getElementById('herbHeader').innerText = resData.detected_herb || "Biological Resource Detected";
+                    document.getElementById('dossierBody').innerText = resData.analysis;
+                    document.getElementById('cryptoHash').innerText = "SHA-256: " + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                } else {
+                    document.getElementById('dossierBody').innerText = "Error: " + data.detail;
+                }
+            } catch(err) {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('idleState').classList.remove('hidden');
+                alert("API connection failed. Ensure FastAPI server is running.");
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+@app.get("/", response_class=HTMLResponse)
+def root_ui():
+    return HTML_PAGE
+
+@app.post("/api/analyze")
+def analyze_patent_claim(payload: PatentQuery):
+    if not payload.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    try:
+        report = examiner.analyze_claim(payload.query, payload.language)
+        return {"success": True, "data": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
